@@ -319,8 +319,8 @@
       g.push('<g class="sc-pt" data-id="' + p.id + '">');
       g.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="13" fill="transparent"/>');
       g.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="8.5" fill="' + p.color + '" stroke="#0b0d12" stroke-width="1.5"/>');
-      g.push('<text x="' + t.label.cx + '" y="' + t.label.cy + '" text-anchor="' + t.label.anchor + '" font-size="11.5" fill="#e8eaed" font-weight="600">' + esc(t.name) + "</text>");
-      g.push('<text x="' + t.label.cx + '" y="' + (t.label.cy + 13) + '" text-anchor="' + t.label.anchor + '" font-size="11" fill="#667081">' + esc(p.modelLabel) + "</text>");
+      g.push('<text x="' + t.label.cx + '" y="' + t.label.cy + '" text-anchor="' + t.label.anchor + '" font-size="11.5" fill="#e8eaed" font-weight="600">' + esc(p.modelLabel) + "</text>");
+      g.push('<text x="' + t.label.cx + '" y="' + (t.label.cy + 13) + '" text-anchor="' + t.label.anchor + '" font-size="11" fill="#667081">' + esc(t.name) + "</text>");
       g.push("</g>");
     });
     g.push("</svg>");
@@ -349,18 +349,9 @@
 
   /* ---------- 数据总表 ---------- */
   (function table() {
-    /* 列序：模型为主维度分组，组内按 harness → 模式排序 */
-    var MODEL_ORDER = { "GLM-5.3-Flash": 0, "GLM-5.3": 1, "MiMo-V2.6-Flash": 2, "MiMo-V2.6-Pro": 3, "step 5": 4 };
-    var MODE_ORDER = { "标准": 0, "PTC": 1, "计划": 2 };
-    var COLS = P.slice().sort(function (a, b) {
-      return (MODEL_ORDER[a.modelLabel] - MODEL_ORDER[b.modelLabel])
-        || (a.harness < b.harness ? -1 : a.harness > b.harness ? 1 : 0)
-        || (MODE_ORDER[a.mode] - MODE_ORDER[b.mode]);
-    });
-
     var rows = [
-      { label: "模型 / 思考强度", get: function (p) { return p.model + '<span class="sub">' + p.variant + "</span>"; } },
       { label: "模式", get: function (p) { return p.harness + " · " + p.mode; } },
+      { label: "模型 / 思考强度", get: function (p) { return p.model + '<span class="sub">' + p.variant + "</span>"; } },
       { label: "轮次 / 步骤", get: function (p) { return p.rounds + " 轮 / " + p.steps + " 步"; }, val: function (p) { return p.steps; }, dir: "min" },
       { label: "模型用时", get: function (p) { return fmtDur(p.modelTime); }, val: function (p) { return p.modelTime; }, dir: "min" },
       { label: "工具调用用时", get: function (p) { return p.toolTime >= 90 ? Math.floor(p.toolTime / 60) + " 分 " + Math.round(p.toolTime % 60) + " 秒" : p.toolTime + " 秒"; } },
@@ -379,21 +370,19 @@
       { label: "实现方式 / 原始产物", get: function (p) { return p.tech + '<span class="sub">原始产物：' + p.origName + "</span>"; } },
       { label: "在线预览", get: function (p) { return '<a href="' + p.demo + '" target="_blank" rel="noopener">新窗口打开 ↗</a>'; } }
     ];
-    var thead = "<thead><tr><th>指标</th>" + COLS.map(function (p, i) {
-      var grp = i === 0 || COLS[i - 1].modelLabel !== p.modelLabel;
-      return '<th' + (grp ? ' class="grp"' : "") + '><span class="thdot" style="background:' + p.color + '"></span>' + p.modelLabel + '<span class="sub">' + p.name + "</span></th>";
+    var thead = "<thead><tr><th>指标</th>" + P.map(function (p) {
+      return '<th><span class="thdot" style="background:' + p.color + '"></span>' + p.name + '<span class="sub">' + p.modelLabel + "</span></th>";
     }).join("") + "</tr></thead>";
     var tbody = "<tbody>" + rows.map(function (r) {
       var bestIdx = -1;
       if (r.val) {
-        var vals = COLS.map(r.val);
+        var vals = P.map(r.val);
         for (var i = 0; i < vals.length; i++) {
           if (bestIdx < 0 || (r.dir === "min" ? vals[i] < vals[bestIdx] : vals[i] > vals[bestIdx])) bestIdx = i;
         }
       }
-      return "<tr><th>" + r.label + "</th>" + COLS.map(function (p, i) {
-        var grp = i === 0 || COLS[i - 1].modelLabel !== p.modelLabel;
-        return "<td" + (i === bestIdx ? ' class="best' : ' class="') + (grp ? ' grp"' : '"') + ">" + r.get(p) + "</td>";
+      return "<tr><th>" + r.label + "</th>" + P.map(function (p, i) {
+        return "<td" + (i === bestIdx ? ' class="best"' : "") + ">" + r.get(p) + "</td>";
       }).join("") + "</tr>";
     }).join("") + "</tbody>";
     $("#benchTable").innerHTML = thead + tbody;

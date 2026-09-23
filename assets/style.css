@@ -166,7 +166,6 @@ table.bench tbody tr:last-child th, table.bench tbody tr:last-child td { border-
 table.bench td { font-variant-numeric: tabular-nums; }
 table.bench td .sub { display: block; font-size: 11px; color: var(--faint); }
 table.bench td.best { background: var(--good-bg); color: #7ee2a0; font-weight: 600; }
-table.bench thead th.grp, table.bench td.grp { border-left: 1px solid #2f3a4d; }
 .legend-f { font-size: 12px; color: var(--faint); margin-top: 8px; }
 
 /* ---------- 口径 / 页脚 ---------- */
