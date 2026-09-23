@@ -213,11 +213,17 @@
 
   /* ---------- 成本 × 耗时 散点 ---------- */
   (function scatter() {
-    var W = 1100, H = 540, L = 78, R = 30, T = 24, B = 62;
+    var W = 1100, H = 720, L = 64, R = 24, T = 24, B = 62;
     var pw = W - L - R, ph = H - T - B, xmax = 3.0, ymax = 130;
     function sx(c) { return L + c / xmax * pw; }
     function sy(t) { return T + (1 - t / ymax) * ph; }
     function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+    /* 标签宽度估算：CJK≈12px，拉丁≈6.8px（11.5px 字号） */
+    function textW(s) {
+      var w = 0;
+      for (var i = 0; i < s.length; i++) w += s.charCodeAt(i) > 255 ? 12 : 6.8;
+      return w;
+    }
 
     var g = [];
     g.push('<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="成本与耗时散点图">');
@@ -251,25 +257,74 @@
     g.push('<polyline points="' + front.map(function (p) { return sx(p.cost.total) + "," + sy(p.modelTime / 60); }).join(" ") +
       '" fill="none" stroke="#e3c88a" stroke-width="1.5" stroke-dasharray="6 5"/>');
 
-    /* 点位：编号点（编号对应下方图例） */
-    P.forEach(function (p, i) {
-      var x = sx(p.cost.total), y = sy(p.modelTime / 60), n = i + 1;
+    /* 点位 + 标签（算法化布局：16 个候选位按碰撞面积+距离评分，最小者胜出；远处胜出时画引线） */
+    var pts = P.map(function (p, i) {
+      return { p: p, i: i, x: sx(p.cost.total), y: sy(p.modelTime / 60), name: p.name.replace(/\s/g, "") };
+    });
+    var boxes = pts.map(function (t) { return { x1: t.x - 10, y1: t.y - 10, x2: t.x + 10, y2: t.y + 10 }; });
+    /* 静态障碍：左上斩杀线说明、右上提示、底部轴标题 */
+    var statics = [
+      { x1: L + 8, y1: T + 2, x2: L + 480, y2: T + 24 },
+      { x1: L + pw - 330, y1: T - 4, x2: L + pw, y2: T + 10 },
+      { x1: L + pw / 2 - 130, y1: H - B - 12, x2: L + pw / 2 + 130, y2: H }
+    ];
+    function hit(box, o) { return box.x1 < o.x2 && o.x1 < box.x2 && box.y1 < o.y2 && o.y1 < box.y2; }
+    function area(box, o) {
+      if (!hit(box, o)) return 0;
+      return (Math.min(box.x2, o.x2) - Math.max(box.x1, o.x1)) * (Math.min(box.y2, o.y2) - Math.max(box.y1, o.y1));
+    }
+    function boxOf(cx, cy, anchor, w) {
+      var x1 = anchor === "start" ? cx : anchor === "end" ? cx - w : cx - w / 2;
+      return { x1: x1, y1: cy - 10, x2: x1 + w, y2: cy + 17, cx: cx, cy: cy, anchor: anchor };
+    }
+    /* 优先放右侧开阔区的点，拥挤区最后放、自适应 */
+    var order = pts.slice().sort(function (a, b) { return b.x - a.x; });
+    order.forEach(function (t) {
+      var w = Math.max(textW(t.name), textW(t.p.modelLabel)) + 4;
+      var cands = [];
+      [[13, -7], [13, 20], [-13, -7], [-13, 20]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: d[0] > 0 ? "start" : "end" }); });
+      [[27, -20], [27, 33], [-27, -20], [-27, 33]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: d[0] > 0 ? "start" : "end" }); });
+      [[0, -34], [0, 47]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: "middle" }); });
+      [[42, -7], [42, 20], [-42, -7], [-42, 20]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: d[0] > 0 ? "start" : "end" }); });
+      [[27, -48], [-27, 61]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: d[0] > 0 ? "start" : "end" }); });
+      [[0, -55], [0, 70], [55, 34], [-55, -34]].forEach(function (d) { cands.push({ cx: t.x + d[0], cy: t.y + d[1], a: d[0] > 0 ? "start" : d[0] < 0 ? "end" : "middle" }); });
+
+      var best = null, bestScore = Infinity, bestCol = 0;
+      cands.forEach(function (cd) {
+        var box = boxOf(cd.cx, cd.cy, cd.a, w);
+        var out = box.x1 < L + 2 || box.x2 > L + pw - 2 || box.y1 < T + 2 || box.y2 > T + ph - 2;
+        if (out) return;
+        var col = 0;
+        for (var j = 0; j < boxes.length; j++) if (j !== t.i) col += area(box, boxes[j]);
+        for (var s = 0; s < statics.length; s++) col += area(box, statics[s]);
+        var dist = Math.abs(cd.cx - t.x) + Math.abs(cd.cy - t.y);
+        var score = col * 3 + dist * 0.35;
+        if (score < bestScore) { bestScore = score; bestCol = col; best = box; }
+      });
+      if (!best) best = boxOf(t.x + 13, t.y - 7, "start", w);
+      t.label = best;
+      t.leader = bestCol > 4;
+      boxes[t.i] = best;
+    });
+
+    pts.forEach(function (t) {
+      var p = t.p;
+      if (t.leader) {
+        var ex = t.label.anchor === "start" ? t.label.x1 : t.label.anchor === "end" ? t.label.x2 : t.label.cx;
+        var ey = (t.label.y1 + t.label.y2) / 2;
+        var ang = Math.atan2(t.y - ey, t.x - ex);
+        var lx = ex + Math.cos(ang) * 1, ly = ey + Math.sin(ang) * 1;
+        g.push('<line x1="' + lx.toFixed(1) + '" y1="' + ly.toFixed(1) + '" x2="' + (t.x - Math.cos(ang) * 10).toFixed(1) + '" y2="' + (t.y - Math.sin(ang) * 10).toFixed(1) + '" stroke="#3a4356" stroke-width="1"/>');
+      }
       g.push('<g class="sc-pt" data-id="' + p.id + '">');
-      g.push('<circle cx="' + x + '" cy="' + y + '" r="13" fill="transparent"/>');
-      g.push('<circle cx="' + x + '" cy="' + y + '" r="8.5" fill="' + p.color + '" stroke="#0b0d12" stroke-width="1.5"/>');
-      g.push('<text x="' + x + '" y="' + (y + 3.5) + '" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0b0d12" pointer-events="none">' + n + "</text>");
+      g.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="13" fill="transparent"/>');
+      g.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="8.5" fill="' + p.color + '" stroke="#0b0d12" stroke-width="1.5"/>');
+      g.push('<text x="' + t.label.cx + '" y="' + t.label.cy + '" text-anchor="' + t.label.anchor + '" font-size="11.5" fill="#e8eaed" font-weight="600">' + esc(t.name) + "</text>");
+      g.push('<text x="' + t.label.cx + '" y="' + (t.label.cy + 13) + '" text-anchor="' + t.label.anchor + '" font-size="11" fill="#667081">' + esc(p.modelLabel) + "</text>");
       g.push("</g>");
     });
     g.push("</svg>");
     $("#scatterPlot").innerHTML = g.join("");
-
-    /* 图例（编号 → 工具·模式·模型 + 关键数） */
-    var lg = '<div class="lg-grid">' + P.map(function (p, i) {
-      return '<div class="lg-item"><span class="lg-n" style="--c:' + p.color + '">' + (i + 1) + "</span>" +
-        "<div><b>" + esc(p.name) + "</b><span> · " + esc(p.modelLabel) + "</span>" +
-        "<i>" + fmtClock(p.modelTime) + " · " + fmtCost(p.cost.total) + " · " + p.steps + " 步" + (p.incomplete ? " · " + esc(p.incomplete) : "") + "</i></div></div>";
-    }).join("") + "</div>";
-    document.querySelector(".sc-card").insertAdjacentHTML("beforeend", lg);
 
     /* 悬停详情 */
     var tip = $("#scTip"), card = tip.parentElement;
