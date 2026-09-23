@@ -315,7 +315,8 @@ window.BENCH = {
       qa: "node --check + three 构建 API 比对 + 10 项静态检查",
       bugCountLabel: "8 处",
       bugs: ["TDZ 变量 / 路面几何方向 / IK 坐标等 8 处潜在运行时问题（静态检查修复）"],
-      knownBugs: null
+      knownBugs: ["启动即卡死：pondC TDZ 引用错误——第 227 行种树循环先引用、第 265 行才 const 声明，模块顶层抛 ReferenceError，与 CDN / 本地化加载无关（原产物缺陷）"],
+      broken: true
     },
     {
       id: "zcode-standard-mimo26p",

@@ -125,6 +125,7 @@
         "<span><b>" + p.steps + "</b> 步</span>" +
         "<span>" + fmtM(p.tokens.total) + " tok</span>" +
         '<span class="sp"></span>' +
+        (p.broken ? '<span style="color:#e3c88a">⚠ 启动即崩，见已知 Bug</span> ' : "") +
         "<span><b>" + fmtCost(p.cost.total) + "</b></span>" +
       "</div>";
     var stage = $(".stage", card), overlay = $(".stage-overlay", card);
