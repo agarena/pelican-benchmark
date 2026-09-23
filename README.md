@@ -12,25 +12,35 @@
 
 ```
 pelican-benchmark-site/
-├─ index.html                  # 首页（同屏画廊 + 分析报告，单页）
+├─ index.html                  # 首页（同屏 13 路画廊 + 成本×耗时散点 + 数据总表 + 已知 Bug 行）
 ├─ .nojekyll                   # 跳过 GitHub Pages 的 Jekyll 处理（必需保留）
 ├─ assets/
 │  ├─ style.css                # 站点样式（暗色主题，零外部字体/图片）
-│  ├─ data.js                  # 横评数据（6 项目全指标，改数据只动这里）
-│  └─ app.js                   # 画廊控制 / 图表 / 数据表渲染逻辑
+│  ├─ data.js                  # 横评数据（13 项目全指标，改数据只动这里）
+│  └─ app.js                   # 画廊控制 / 散点图与图例 / 数据表渲染逻辑
 ├─ vendor/                     # 本地化第三方库（离线可跑，不受 CDN 波动影响）
+│  ├─ three-0.147.0.min.js
 │  ├─ three-0.160.0.module.js
+│  ├─ three-0.160.0-addons/controls/OrbitControls.js
+│  ├─ three-0.161.0.module.js
 │  ├─ three-0.165.0.module.min.js
 │  ├─ three-0.165.0-addons/controls/OrbitControls.js
 │  ├─ three-0.170.0.module.js
 │  └─ three-0.170.0-addons/controls/OrbitControls.js
-└─ demos/                      # 6 个原始交付物（未改场景代码，仅本地化依赖）
-   ├─ dsh-standard-glm5f.html  # 原 测试用例-标准-glm5f/pelican-rider.html
-   ├─ dsh-ptc-glm5f.html       # 原 测试用例-PTC-glm5f/index.html
-   ├─ zcode-standard-glm5.html # 原 测试用例-zcode-glm5/index.html
-   ├─ zcode-standard-glm5f.html# 原 测试用例-zcode-glm5f/鹈鹕骑自行车.html
-   ├─ zcode-plan-glm5.html     # 原 测试用例-zcode计划-glm5/index.html（three 全内联）
-   └─ zcode-plan-glm5f.html    # 原 测试用例-zcode计划-glm5f/index.html
+└─ demos/                      # 13 个原始交付物（未改场景代码，仅本地化依赖）
+   ├─ dsh-standard-glm5f.html  # 原 测试用例-标准-glm5f/pelican-rider.html（GLM-5.3-Flash）
+   ├─ dsh-ptc-glm5f.html       # 原 测试用例-PTC-glm5f/index.html（GLM-5.3-Flash）
+   ├─ zcode-standard-glm5.html # 原 测试用例-zcode-glm5/index.html（GLM-5.3）
+   ├─ zcode-standard-glm5f.html# 原 测试用例-zcode-glm5f/鹈鹕骑自行车.html（GLM-5.3-Flash）
+   ├─ zcode-plan-glm5.html     # 原 测试用例-zcode计划-glm5/index.html（GLM-5.3，three 全内联）
+   ├─ zcode-plan-glm5f.html    # 原 测试用例-zcode计划-glm5f/index.html（GLM-5.3-Flash）
+   ├─ dsh-standard-mimo26f.html# 原 测试用例-标准-mimo26f/index.html（MiMo-V2.6-Flash）
+   ├─ dsh-ptc-mimo26f.html     # 原 测试用例-PTC-mimo26f/index.html（MiMo-V2.6-Flash）
+   ├─ zcode-standard-mimo26f.html # 原 测试用例-zcode-mimo26f/鹈鹕骑自行车.html（MiMo-V2.6-Flash）
+   ├─ dsh-ptc-s5.html          # 原 测试用例-PTC-s5/index.html（step 5）
+   ├─ zcode-standard-mimo26p.html # 原 测试用例-zcode-mimo26p/index.html（MiMo-V2.6-Pro）
+   ├─ dsh-standard-mimo26p.html# 原 测试用例-标准-mimo26p/index.html（MiMo-V2.6-Pro）
+   └─ dsh-standard-s5.html     # 原 测试用例-标准-s5/index.html（step 5）
 ```
 
 ## 本地预览

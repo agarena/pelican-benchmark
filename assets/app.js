@@ -29,7 +29,14 @@
     "zcode-standard-glm5": "#bar",
     "zcode-standard-glm5f": "#panel",
     "zcode-plan-glm5": "#panel-ctl,#panel-help",
-    "zcode-plan-glm5f": "#panel"
+    "zcode-plan-glm5f": "#panel",
+    "dsh-standard-mimo26f": "#topbar,.bar,#stats",
+    "dsh-ptc-mimo26f": ".panel",
+    "zcode-standard-mimo26f": "#hud,.ctl",
+    "dsh-ptc-s5": "#hud,#panel",
+    "zcode-standard-mimo26p": "#hud,#panel",
+    "dsh-standard-mimo26p": "#ctrl,.panel,#stats",
+    "dsh-standard-s5": "#hud"
   };
 
   var states = {};
@@ -199,12 +206,15 @@
     window.addEventListener("scroll", sweepLoad, { passive: true });
     window.addEventListener("resize", sweepLoad);
     sweepLoad();
+    /* 轮询兜底：个别环境（虚拟时钟 / 嵌套 iframe）不产出渲染帧时 rAF 与滚动事件均不触发，
+       用低频定时器保证"滚到即加载、滚远即释放"的行为在任何环境稳定 */
+    setInterval(sweepLoad, 800);
   })();
 
   /* ---------- 成本 × 耗时 散点 ---------- */
   (function scatter() {
     var W = 1100, H = 540, L = 78, R = 30, T = 24, B = 62;
-    var pw = W - L - R, ph = H - T - B, xmax = 0.9, ymax = 65;
+    var pw = W - L - R, ph = H - T - B, xmax = 3.0, ymax = 130;
     function sx(c) { return L + c / xmax * pw; }
     function sy(t) { return T + (1 - t / ymax) * ph; }
     function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
@@ -212,13 +222,13 @@
     var g = [];
     g.push('<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="成本与耗时散点图">');
     /* 网格 + 刻度：x 费用 */
-    for (var c = 0; c <= 9; c++) {
-      var v = c / 10, x = sx(v);
+    for (var c = 0; c <= 6; c++) {
+      var v = c * 0.5, x = sx(v);
       g.push('<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="rgba(148,163,184,.07)"/>');
       g.push('<text x="' + x + '" y="' + (T + ph + 22) + '" text-anchor="middle" font-size="11.5" fill="#667081">' + v.toFixed(1) + "</text>");
     }
     /* 网格 + 刻度：y 用时（分钟） */
-    for (var m = 0; m <= 60; m += 10) {
+    for (var m = 0; m <= 120; m += 20) {
       var y = sy(m);
       g.push('<line x1="' + L + '" y1="' + y + '" x2="' + (L + pw) + '" y2="' + y + '" stroke="rgba(148,163,184,.07)"/>');
       g.push('<text x="' + (L - 12) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11.5" fill="#667081">' + m + "</text>");
@@ -230,6 +240,7 @@
     g.push('<text x="' + (L + pw / 2) + '" y="' + (H - 14) + '" text-anchor="middle" font-size="12.5" fill="#9aa3af">实际费用（元）→ 越左越省</text>');
     g.push('<text x="20" y="' + (T + ph / 2) + '" text-anchor="middle" font-size="12.5" fill="#9aa3af" transform="rotate(-90 20 ' + (T + ph / 2) + ')">模型用时（分钟）→ 越下越快</text>');
     g.push('<text x="' + (L + pw) + '" y="' + (T + 6) + '" text-anchor="end" font-size="12" fill="#667081">越靠左下 = 成本越低 · 耗时越短</text>');
+    g.push('<text x="' + (L + 14) + '" y="' + (T + 20) + '" font-size="12.5" fill="#e3c88a">⤹ 斩杀线（帕累托前沿）：线外不存在又更省又更快的组合</text>');
 
     /* 斩杀线（帕累托前沿）：连接"未被任何更省且更快的组合碾压"的点，按费用升序 */
     var front = P.filter(function (p) {
@@ -239,31 +250,26 @@
     }).sort(function (a, b) { return a.cost.total - b.cost.total; });
     g.push('<polyline points="' + front.map(function (p) { return sx(p.cost.total) + "," + sy(p.modelTime / 60); }).join(" ") +
       '" fill="none" stroke="#e3c88a" stroke-width="1.5" stroke-dasharray="6 5"/>');
-    var mid = front.length >= 2 ? front[Math.floor(front.length / 2)] : null;
-    if (mid) {
-      g.push('<text x="' + (sx(mid.cost.total) - 140) + '" y="' + (sy(mid.modelTime / 60) - 46) + '" text-anchor="middle" font-size="12" fill="#e3c88a">斩杀线（帕累托前沿）</text>');
-    }
 
-    /* 点位标签的手工偏移（数据固定，避免重叠）；标注写全模型名 */
-    var LO = {
-      "dsh-standard-glm5f": { dx: 10, dy: 17, a: "start" },
-      "dsh-ptc-glm5f": { dx: -10, dy: 4, a: "end" },
-      "zcode-standard-glm5": { dx: 10, dy: -12, a: "start" },
-      "zcode-standard-glm5f": { dx: 10, dy: -8, a: "start" },
-      "zcode-plan-glm5": { dx: -10, dy: -12, a: "end" },
-      "zcode-plan-glm5f": { dx: 0, dy: 24, a: "middle" }
-    };
-
-    P.forEach(function (p) {
-      var x = sx(p.cost.total), y = sy(p.modelTime / 60), o = LO[p.id];
-      var label = p.name.replace(/\s/g, "") + "·" + p.modelLabel;
+    /* 点位：编号点（编号对应下方图例） */
+    P.forEach(function (p, i) {
+      var x = sx(p.cost.total), y = sy(p.modelTime / 60), n = i + 1;
       g.push('<g class="sc-pt" data-id="' + p.id + '">');
-      g.push('<circle cx="' + x + '" cy="' + y + '" r="7.5" fill="' + p.color + '" stroke="#0b0d12" stroke-width="2"/>');
-      g.push('<text x="' + (x + o.dx) + '" y="' + (y + o.dy) + '" text-anchor="' + o.a + '" font-size="12.5" fill="#e8eaed" font-weight="600">' + esc(label) + "</text>");
+      g.push('<circle cx="' + x + '" cy="' + y + '" r="13" fill="transparent"/>');
+      g.push('<circle cx="' + x + '" cy="' + y + '" r="8.5" fill="' + p.color + '" stroke="#0b0d12" stroke-width="1.5"/>');
+      g.push('<text x="' + x + '" y="' + (y + 3.5) + '" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0b0d12" pointer-events="none">' + n + "</text>");
       g.push("</g>");
     });
     g.push("</svg>");
     $("#scatterPlot").innerHTML = g.join("");
+
+    /* 图例（编号 → 工具·模式·模型 + 关键数） */
+    var lg = '<div class="lg-grid">' + P.map(function (p, i) {
+      return '<div class="lg-item"><span class="lg-n" style="--c:' + p.color + '">' + (i + 1) + "</span>" +
+        "<div><b>" + esc(p.name) + "</b><span> · " + esc(p.modelLabel) + "</span>" +
+        "<i>" + fmtClock(p.modelTime) + " · " + fmtCost(p.cost.total) + " · " + p.steps + " 步" + (p.incomplete ? " · " + esc(p.incomplete) : "") + "</i></div></div>";
+    }).join("") + "</div>";
+    document.querySelector(".sc-card").insertAdjacentHTML("beforeend", lg);
 
     /* 悬停详情 */
     var tip = $("#scTip"), card = tip.parentElement;
@@ -290,7 +296,7 @@
   (function table() {
     var rows = [
       { label: "模式", get: function (p) { return p.harness + " · " + p.mode; } },
-      { label: "模型（思考强度均为 max）", get: function (p) { return p.model; } },
+      { label: "模型 / 思考强度", get: function (p) { return p.model + '<span class="sub">' + p.variant + "</span>"; } },
       { label: "轮次 / 步骤", get: function (p) { return p.rounds + " 轮 / " + p.steps + " 步"; }, val: function (p) { return p.steps; }, dir: "min" },
       { label: "模型用时", get: function (p) { return fmtDur(p.modelTime); }, val: function (p) { return p.modelTime; }, dir: "min" },
       { label: "工具调用用时", get: function (p) { return p.toolTime >= 90 ? Math.floor(p.toolTime / 60) + " 分 " + Math.round(p.toolTime % 60) + " 秒" : p.toolTime + " 秒"; } },
@@ -305,6 +311,7 @@
       { label: "实际费用", get: function (p) { return fmtCost(p.cost.total) + '<span class="sub">缓存 ' + p.cost.cache.toFixed(4) + " · 输入 " + p.cost.input.toFixed(4) + " · 输出 " + p.cost.output.toFixed(4) + "</span>"; }, val: function (p) { return p.cost.total; }, dir: "min" },
       { label: "截图 QA 修复", get: function (p) { return p.bugs.length ? p.bugCountLabel + '<span class="sub">源报告记载</span>' : '<span style="color:var(--faint)">未记载</span>'; } },
       { label: "已知 Bug（实测）", get: function (p) { return p.knownBugs && p.knownBugs.length ? p.knownBugs.map(function (b) { return "· " + b; }).join("<br>") : "—"; } },
+      { label: "备注", get: function (p) { return p.incomplete ? '<span style="color:#e3c88a">' + p.incomplete + "</span>" : "—"; } },
       { label: "实现方式 / 原始产物", get: function (p) { return p.tech + '<span class="sub">原始产物：' + p.origName + "</span>"; } },
       { label: "在线预览", get: function (p) { return '<a href="' + p.demo + '" target="_blank" rel="noopener">新窗口打开 ↗</a>'; } }
     ];

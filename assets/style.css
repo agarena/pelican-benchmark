@@ -136,11 +136,17 @@ section { padding: 52px 0 6px; }
 .hud-note b { color: var(--muted); font-weight: 500; }
 
 /* ---------- 成本 × 耗时散点 ---------- */
-.sc-card { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 16px 16px 4px; }
+.sc-card { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 16px 16px 14px; }
 .sc-card svg { display: block; width: 100%; height: auto; }
 .sc-pt { cursor: pointer; }
 .sc-pt circle { transition: stroke-width 0.12s; }
-.sc-pt:hover circle { stroke-width: 3.5; }
+.sc-pt:hover circle { stroke-width: 3; }
+.lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 7px 16px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 13px; }
+.lg-item { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; }
+.lg-n { width: 16px; height: 16px; border-radius: 4px; background: var(--c); color: #0b0d12; font: 700 10px/16px ui-monospace, monospace; text-align: center; flex: none; margin-top: 1px; }
+.lg-item b { color: var(--text); font-weight: 600; }
+.lg-item span { color: var(--muted); }
+.lg-item i { display: block; color: var(--faint); font-style: normal; font-variant-numeric: tabular-nums; font-size: 11px; }
 .sc-tip {
   position: absolute; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 0.12s;
   background: #1a2029; border: 1px solid var(--line-2); border-radius: 8px; padding: 9px 13px;
@@ -156,7 +162,7 @@ section { padding: 52px 0 6px; }
 
 /* ---------- 数据表 ---------- */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-table.bench { border-collapse: collapse; width: 100%; min-width: 1020px; font-size: 12.5px; }
+table.bench { border-collapse: collapse; width: 100%; min-width: 1900px; font-size: 12.5px; }
 table.bench th, table.bench td { border-bottom: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
 table.bench thead th { position: sticky; top: 0; background: var(--panel-2); font-size: 12px; white-space: nowrap; z-index: 2; }
 table.bench thead th .thdot { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 7px; }
